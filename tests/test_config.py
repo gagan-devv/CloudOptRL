@@ -17,11 +17,11 @@ class TestEnvConfig:
         config = EnvConfig()
         
         assert config.max_steps == 100
-        assert config.initial_resources == 3
+        assert config.initial_resources == 2
         assert config.base_request_rate == 50
         assert config.request_rate_std == 10.0
         assert config.cpu_per_request == 0.5
-        assert config.memory_per_request == 0.3
+        assert config.memory_per_request == 0.45
         assert config.resource_capacity == 30.0
         assert config.termination_threshold == 95.0
     

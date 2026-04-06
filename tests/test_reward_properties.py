@@ -13,8 +13,8 @@ from env.reward import RewardCalculator
 # Feature: cloud-resource-allocation-rl, Property 8: Optimal Range Rewards
 @settings(max_examples=100)
 @given(
-    cpu_util=st.floats(min_value=40.0, max_value=70.0),
-    memory_util=st.floats(min_value=40.0, max_value=70.0),
+    cpu_util=st.floats(min_value=35.0, max_value=70.0),
+    memory_util=st.floats(min_value=35.0, max_value=70.0),
     allocated_resources=st.integers(min_value=1, max_value=20)
 )
 def test_optimal_range_rewards(cpu_util, memory_util, allocated_resources):
@@ -23,8 +23,8 @@ def test_optimal_range_rewards(cpu_util, memory_util, allocated_resources):
     
     **Validates: Requirements 4.1, 4.5**
     
-    For any state where CPU utilization is between 40-70% and memory utilization
-    is between 40-70%, the reward SHALL be positive.
+    For any state where CPU utilization is between 35-70% and memory utilization
+    is between 35-70%, the reward SHALL be positive.
     """
     calculator = RewardCalculator()
     reward = calculator.calculate_reward(cpu_util, memory_util, allocated_resources)
@@ -43,8 +43,8 @@ def test_optimal_range_rewards(cpu_util, memory_util, allocated_resources):
 # Feature: cloud-resource-allocation-rl, Property 9: Over-Provisioning Penalty
 @settings(max_examples=100)
 @given(
-    cpu_util=st.floats(min_value=0.0, max_value=39.9),
-    memory_util=st.floats(min_value=0.0, max_value=39.9),
+    cpu_util=st.floats(min_value=0.0, max_value=34.9),
+    memory_util=st.floats(min_value=0.0, max_value=34.9),
     allocated_resources=st.integers(min_value=1, max_value=20)
 )
 def test_over_provisioning_penalty(cpu_util, memory_util, allocated_resources):
@@ -53,8 +53,8 @@ def test_over_provisioning_penalty(cpu_util, memory_util, allocated_resources):
     
     **Validates: Requirements 4.2**
     
-    For any state where CPU utilization is below 40% and memory utilization is
-    below 40% (indicating excess resources), the reward SHALL be negative.
+    For any state where CPU utilization is below 35% and memory utilization is
+    below 35% (indicating excess resources), the reward SHALL be negative.
     """
     calculator = RewardCalculator()
     reward = calculator.calculate_reward(cpu_util, memory_util, allocated_resources)
