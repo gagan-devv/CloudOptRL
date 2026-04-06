@@ -7,6 +7,7 @@ allocated resources) and processes actions to dynamically adjust resource alloca
 """
 
 import numpy as np
+import torch
 from typing import Tuple, Dict, List, Optional
 from env.config import EnvConfig
 from env.reward import RewardCalculator
@@ -55,6 +56,7 @@ class CloudResourceEnv:
         self.memory_util: float = 0.0
         self.request_rate: int = 0
         self.allocated_resources: int = self.config.initial_resources
+        self.latency: float = 0.0  # Latency in ms
         
         # Initialize episode tracking
         self.current_step: int = 0
@@ -115,6 +117,9 @@ class CloudResourceEnv:
         self.cpu_util = max(0.0, min(100.0, self.cpu_util))
         self.memory_util = max(0.0, min(100.0, self.memory_util))
         
+        # Calculate latency: higher request rate and fewer resources increase latency
+        self.latency = self.request_rate / max(self.allocated_resources, 1)
+        
         # Return initial observation
         return self._get_observation()
     
@@ -131,6 +136,20 @@ class CloudResourceEnv:
             float(self.request_rate),
             float(self.allocated_resources)
         ], dtype=np.float32)
+    
+    def get_state_tensor(self) -> torch.Tensor:
+        """
+        Get current state as PyTorch tensor.
+        
+        This method provides a PyTorch tensor representation of the current state,
+        enabling seamless integration with PyTorch-based RL algorithms and neural networks.
+        The tensor maintains the same structure as the NumPy observation array.
+        
+        Returns:
+            PyTorch tensor [cpu_util, memory_util, request_rate, allocated_resources]
+        """
+        observation = self._get_observation()
+        return torch.from_numpy(observation)
     
     def _update_state(self, action: int) -> None:
         """
@@ -177,6 +196,9 @@ class CloudResourceEnv:
         # Clamp all values to valid ranges
         self.cpu_util = max(0.0, min(100.0, self.cpu_util))
         self.memory_util = max(0.0, min(100.0, self.memory_util))
+        
+        # Calculate latency: higher request rate and fewer resources increase latency
+        self.latency = self.request_rate / max(self.allocated_resources, 1)
     
     def _check_termination(self) -> bool:
         """
@@ -269,7 +291,8 @@ class CloudResourceEnv:
             'cpu_util': self.cpu_util,
             'memory_util': self.memory_util,
             'request_rate': self.request_rate,
-            'allocated_resources': self.allocated_resources
+            'allocated_resources': self.allocated_resources,
+            'latency': self.latency
         }
         
         return observation, reward, self.done, info
