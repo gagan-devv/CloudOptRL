@@ -28,11 +28,11 @@ class EnvConfig:
         termination_threshold: Utilization percentage triggering episode termination
     """
     max_steps: int = 100
-    initial_resources: int = 3
+    initial_resources: int = 2
     base_request_rate: int = 50
     request_rate_std: float = 10.0
     cpu_per_request: float = 0.5
-    memory_per_request: float = 0.3
+    memory_per_request: float = 0.45
     resource_capacity: float = 30.0
     termination_threshold: float = 95.0
 

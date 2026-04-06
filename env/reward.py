@@ -25,9 +25,9 @@ class RewardCalculator:
     
     def __init__(
         self,
-        target_cpu_range: tuple[float, float] = (40.0, 70.0),
-        target_memory_range: tuple[float, float] = (40.0, 70.0),
-        resource_cost_weight: float = 0.1
+        target_cpu_range: tuple[float, float] = (35.0, 70.0),
+        target_memory_range: tuple[float, float] = (35.0, 70.0),
+        resource_cost_weight: float = 0.05
     ):
         """
         Initialize reward calculator with target ranges and weights.
@@ -86,14 +86,14 @@ class RewardCalculator:
         # Combine components
         total_reward = cpu_reward + memory_reward + resource_penalty
         
-        # If either metric is outside optimal range, cap reward at negative value
-        # This ensures that mixed scenarios (one optimal, one suboptimal) are always negative
+        # If either metric is outside optimal range, apply a small additional penalty
+        # This ensures that mixed scenarios (one optimal, one suboptimal) are discouraged
         cpu_in_range = self.target_cpu_range[0] <= cpu_util <= self.target_cpu_range[1]
         memory_in_range = self.target_memory_range[0] <= memory_util <= self.target_memory_range[1]
         
         if not (cpu_in_range and memory_in_range):
-            # At least one metric is out of range - cap at small negative value
-            total_reward = min(total_reward, -0.01)
+            # At least one metric is out of range - apply small penalty
+            total_reward -= 0.1
         
         return total_reward
     
@@ -128,7 +128,7 @@ class RewardCalculator:
             # Below optimal range - over-provisioning penalty
             # Penalty increases as utilization gets further below target
             distance_below = target_min - util
-            return -0.5 - (distance_below / 100.0)
+            return -0.3 - (distance_below / 100.0)
         else:  # util > target_max
             # Above optimal range - under-provisioning penalty
             # Penalty increases as utilization gets further above target
