@@ -6,6 +6,7 @@ providing type-safe configuration with sensible defaults for the RL simulation.
 """
 
 from dataclasses import dataclass
+from pydantic import BaseModel, Field
 
 
 @dataclass
@@ -62,3 +63,42 @@ class RewardConfig:
     resource_cost_weight: float = 0.1
     over_provision_penalty: float = -0.5
     under_provision_penalty: float = -1.0
+
+
+class EnvState(BaseModel):
+    """
+    Typed environment state representation for OpenEnv compliance.
+    
+    This Pydantic model provides validated, typed access to environment state
+    with automatic field validation ensuring values are within valid ranges.
+    
+    Attributes:
+        cpu: CPU utilization percentage in range [0.0, 100.0]
+        memory: Memory utilization percentage in range [0.0, 100.0]
+        request_rate: Incoming request rate, non-negative float
+        resources: Allocated server instances, minimum 1
+    """
+    cpu: float = Field(ge=0.0, le=100.0, description="CPU utilization percentage")
+    memory: float = Field(ge=0.0, le=100.0, description="Memory utilization percentage")
+    request_rate: float = Field(ge=0.0, description="Incoming request rate")
+    resources: int = Field(ge=1, description="Allocated server instances")
+
+
+# Task difficulty configurations for OpenEnv compliance
+TASKS = {
+    "easy": {
+        "base_request_rate": 40,
+        "request_rate_std": 5.0,
+        "description": "Low request rate with minimal variance - ideal for learning basic resource allocation"
+    },
+    "medium": {
+        "base_request_rate": 60,
+        "request_rate_std": 15.0,
+        "description": "Moderate request rate with medium variance - balanced challenge for standard training"
+    },
+    "hard": {
+        "base_request_rate": 80,
+        "request_rate_std": 25.0,
+        "description": "High request rate with high variance - challenging scenario requiring robust policies"
+    }
+}

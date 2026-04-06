@@ -36,7 +36,8 @@ class CloudResourceEnv:
     def __init__(
         self,
         config: Optional[EnvConfig] = None,
-        reward_calculator: Optional[RewardCalculator] = None
+        reward_calculator: Optional[RewardCalculator] = None,
+        task_name: str = "medium"
     ):
         """
         Initialize the cloud resource allocation environment.
@@ -44,9 +45,28 @@ class CloudResourceEnv:
         Args:
             config: Environment configuration parameters. If None, uses default EnvConfig.
             reward_calculator: Reward calculator instance. If None, creates default RewardCalculator.
+            task_name: Task difficulty level ("easy", "medium", or "hard"). Defaults to "medium".
+        
+        Raises:
+            ValueError: If task_name is not in TASKS dictionary.
         """
+        # Import TASKS here to avoid circular imports
+        from env.config import TASKS
+        
+        # Validate task_name
+        if task_name not in TASKS:
+            raise ValueError(
+                f"Invalid task_name '{task_name}'. Must be one of: {list(TASKS.keys())}"
+            )
+        
         # Use default config if not provided
         self.config = config if config is not None else EnvConfig()
+        
+        # Override config with task-specific parameters
+        task_config = TASKS[task_name]
+        self.config.base_request_rate = task_config["base_request_rate"]
+        self.config.request_rate_std = task_config["request_rate_std"]
+        self.task_name = task_name
         
         # Initialize reward calculator
         self.reward_calculator = reward_calculator if reward_calculator is not None else RewardCalculator()
@@ -150,6 +170,26 @@ class CloudResourceEnv:
         """
         observation = self._get_observation()
         return torch.from_numpy(observation)
+    
+    def state(self):
+        """
+        Get current state as EnvState instance for OpenEnv compliance.
+        
+        This method provides typed, validated access to the environment state
+        using the Pydantic EnvState model. It can be called after reset() or step()
+        to retrieve the current state in a structured format.
+        
+        Returns:
+            EnvState: Pydantic model with cpu, memory, request_rate, and resources fields
+        """
+        from env.config import EnvState
+        
+        return EnvState(
+            cpu=self.cpu_util,
+            memory=self.memory_util,
+            request_rate=float(self.request_rate),
+            resources=self.allocated_resources
+        )
     
     def _update_state(self, action: int) -> None:
         """

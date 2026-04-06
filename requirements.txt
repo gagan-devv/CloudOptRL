@@ -4,3 +4,4 @@ hypothesis
 pytest
 torch>=2.0.0
 matplotlib
+pydantic>=2.0.0
