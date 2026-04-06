@@ -1,4 +1,39 @@
+# Kiro spec files
 .kiro/
+
+# Hypothesis property-based testing
 .hypothesis/
 
-__pycache__
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Output files
+*.txt
+!requirements.txt
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
