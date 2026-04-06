@@ -177,3 +177,99 @@ class CloudResourceEnv:
         # Clamp all values to valid ranges
         self.cpu_util = max(0.0, min(100.0, self.cpu_util))
         self.memory_util = max(0.0, min(100.0, self.memory_util))
+    
+    def _check_termination(self) -> bool:
+        """
+        Check if episode should terminate based on state or step count.
+        
+        Termination conditions:
+        1. Step count exceeds max_steps
+        2. CPU utilization exceeds termination threshold (default 95%)
+        3. Memory utilization exceeds termination threshold (default 95%)
+        
+        Returns:
+            True if episode should terminate, False otherwise
+        """
+        # Check if max steps exceeded
+        if self.current_step >= self.config.max_steps:
+            return True
+        
+        # Check if CPU utilization exceeds threshold
+        if self.cpu_util > self.config.termination_threshold:
+            return True
+        
+        # Check if memory utilization exceeds threshold
+        if self.memory_util > self.config.termination_threshold:
+            return True
+        
+        return False
+    
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, Dict]:
+        """
+        Execute one time step with the given action.
+        
+        This method processes the action, updates the environment state, calculates
+        the reward, checks for termination, and stores the transition in episode
+        history. It returns the standard RL tuple (observation, reward, done, info).
+        
+        Args:
+            action: Action to execute (0: decrease, 1: maintain, 2: increase)
+        
+        Returns:
+            observation: Current state after action as numpy array
+            reward: Reward signal from reward calculator
+            done: Whether episode has terminated
+            info: Additional diagnostic information dictionary
+        
+        Raises:
+            ValueError: If action is not in valid range {0, 1, 2}
+            RuntimeError: If step is called after episode termination
+        """
+        # Check if episode already terminated
+        if self.done:
+            raise RuntimeError(
+                "Cannot call step() after episode termination. Call reset() to start a new episode."
+            )
+        
+        # Validate action is in valid range
+        if action not in {self.ACTION_DECREASE, self.ACTION_MAINTAIN, self.ACTION_INCREASE}:
+            raise ValueError(
+                f"Invalid action: {action}. Must be 0 (decrease), 1 (maintain), or 2 (increase)."
+            )
+        
+        # Update state based on action
+        self._update_state(action)
+        
+        # Increment step counter
+        self.current_step += 1
+        
+        # Calculate reward
+        reward = self.reward_calculator.calculate_reward(
+            self.cpu_util,
+            self.memory_util,
+            self.allocated_resources
+        )
+        
+        # Check termination status
+        self.done = self._check_termination()
+        
+        # Get current observation
+        observation = self._get_observation()
+        
+        # Store transition in episode history
+        self.episode_states.append(observation.copy())
+        self.episode_actions.append(action)
+        self.episode_rewards.append(reward)
+        self.cumulative_reward += reward
+        
+        # Prepare info dictionary
+        info = {
+            'step': self.current_step,
+            'cumulative_reward': self.cumulative_reward,
+            'cpu_util': self.cpu_util,
+            'memory_util': self.memory_util,
+            'request_rate': self.request_rate,
+            'allocated_resources': self.allocated_resources
+        }
+        
+        return observation, reward, self.done, info

@@ -6,7 +6,7 @@ using Hypothesis for randomized input generation. Each test runs a minimum of
 100 iterations to ensure adequate coverage.
 """
 
-from hypothesis import given, strategies as st, settings
+from hypothesis import given, strategies as st, settings, assume
 import numpy as np
 from env.environment import CloudResourceEnv
 from env.config import EnvConfig
@@ -238,4 +238,171 @@ def test_request_rate_impact(initial_resources, base_request_rate_low, base_requ
     assert env_high.memory_util > env_low.memory_util, (
         f"Higher request rate should increase memory utilization: "
         f"{env_high.memory_util:.2f}% (high) vs {env_low.memory_util:.2f}% (low)"
+    )
+
+
+
+# Feature: cloud-resource-allocation-rl, Property 1: State Bounds Invariant
+@settings(max_examples=100)
+@given(
+    initial_resources=st.integers(min_value=1, max_value=10),
+    base_request_rate=st.integers(min_value=20, max_value=150),
+    actions=st.lists(st.integers(min_value=0, max_value=2), min_size=1, max_size=50),
+    seed=st.integers(min_value=0, max_value=1000000)
+)
+def test_state_bounds_invariant(initial_resources, base_request_rate, actions, seed):
+    """
+    Property 1: State Bounds Invariant
+    
+    **Validates: Requirements 1.1, 1.2, 1.3, 1.4**
+    
+    For any environment state after any sequence of actions, CPU utilization
+    SHALL be between 0 and 100, memory utilization SHALL be between 0 and 100,
+    request rate SHALL be non-negative, and allocated resources SHALL be at least 1.
+    """
+    config = EnvConfig(
+        initial_resources=initial_resources,
+        base_request_rate=base_request_rate
+    )
+    env = CloudResourceEnv(config=config)
+    env.rng.seed(seed)
+    env.reset()
+    
+    # Execute action sequence
+    for action in actions:
+        obs, reward, done, info = env.step(action)
+        
+        # Verify all state values are within valid bounds
+        assert 0 <= obs[0] <= 100, f"CPU utilization out of bounds: {obs[0]}"
+        assert 0 <= obs[1] <= 100, f"Memory utilization out of bounds: {obs[1]}"
+        assert obs[2] >= 0, f"Request rate is negative: {obs[2]}"
+        assert obs[3] >= 1, f"Allocated resources below minimum: {obs[3]}"
+        
+        # Also verify internal state matches observation
+        assert abs(env.cpu_util - obs[0]) < 0.01, "CPU util mismatch"
+        assert abs(env.memory_util - obs[1]) < 0.01, "Memory util mismatch"
+        assert env.request_rate == obs[2], "Request rate mismatch"
+        assert env.allocated_resources == obs[3], "Allocated resources mismatch"
+        
+        if done:
+            break
+
+
+# Feature: cloud-resource-allocation-rl, Property 3: Step Return Structure
+@settings(max_examples=100)
+@given(
+    action=st.integers(min_value=0, max_value=2),
+    initial_resources=st.integers(min_value=1, max_value=10),
+    seed=st.integers(min_value=0, max_value=1000000)
+)
+def test_step_return_structure(action, initial_resources, seed):
+    """
+    Property 3: Step Return Structure
+    
+    **Validates: Requirements 1.6, 5.4**
+    
+    For any valid action, calling step(action) SHALL return a tuple containing
+    an observation array, a float reward, a boolean done flag, and a dictionary
+    info object.
+    """
+    config = EnvConfig(initial_resources=initial_resources)
+    env = CloudResourceEnv(config=config)
+    env.rng.seed(seed)
+    env.reset()
+    
+    # Execute step
+    result = env.step(action)
+    
+    # Verify return structure is a tuple with 4 elements
+    assert isinstance(result, tuple), f"step() should return tuple, got {type(result)}"
+    assert len(result) == 4, f"step() should return 4-tuple, got {len(result)} elements"
+    
+    observation, reward, done, info = result
+    
+    # Verify observation is numpy array with correct shape and dtype
+    assert isinstance(observation, np.ndarray), f"Observation should be numpy array, got {type(observation)}"
+    assert observation.shape == (4,), f"Observation should have shape (4,), got {observation.shape}"
+    assert observation.dtype == np.float32, f"Observation should be float32, got {observation.dtype}"
+    
+    # Verify reward is a float
+    assert isinstance(reward, (float, np.floating)), f"Reward should be float, got {type(reward)}"
+    
+    # Verify done is a boolean
+    assert isinstance(done, bool), f"Done flag should be boolean, got {type(done)}"
+    
+    # Verify info is a dictionary
+    assert isinstance(info, dict), f"Info should be dictionary, got {type(info)}"
+    
+    # Verify info contains expected keys
+    expected_keys = {'step', 'cumulative_reward', 'cpu_util', 'memory_util', 'request_rate', 'allocated_resources'}
+    assert expected_keys.issubset(info.keys()), f"Info missing expected keys: {expected_keys - info.keys()}"
+
+
+# Feature: cloud-resource-allocation-rl, Property 5: Stochastic State Transitions
+@settings(max_examples=100)
+@given(
+    action=st.integers(min_value=1, max_value=2),  # Only MAINTAIN and INCREASE to avoid immediate termination
+    initial_resources=st.integers(min_value=4, max_value=10),  # Higher minimum for stability
+    base_request_rate=st.integers(min_value=30, max_value=70),  # Moderate range
+    seed1=st.integers(min_value=0, max_value=1000000),
+    seed2=st.integers(min_value=0, max_value=1000000)
+)
+def test_stochastic_state_transitions(action, initial_resources, base_request_rate, seed1, seed2):
+    """
+    Property 5: Stochastic State Transitions
+    
+    **Validates: Requirements 3.1, 3.5**
+    
+    For any environment state and action, executing the same action from the same
+    state multiple times SHALL produce different next states due to stochastic
+    request rate fluctuations.
+    """
+    # Only test when seeds are different
+    assume(seed1 != seed2)
+    
+    config = EnvConfig(
+        initial_resources=initial_resources,
+        base_request_rate=base_request_rate,
+        request_rate_std=10.0,  # Ensure non-zero stochasticity
+        max_steps=50  # Ensure enough steps to observe divergence
+    )
+    
+    # To properly test stochasticity, we run multiple steps and check that
+    # the trajectories diverge over time. Due to integer rounding of request
+    # rates, a single step might occasionally produce the same value, but
+    # over multiple steps the trajectories should diverge.
+    
+    # First execution with seed1
+    env1 = CloudResourceEnv(config=config)
+    env1.rng.seed(seed1)
+    env1.reset()
+    
+    # Second execution with seed2
+    env2 = CloudResourceEnv(config=config)
+    env2.rng.seed(seed2)
+    env2.reset()
+    
+    # Execute multiple steps and collect observations
+    trajectory_differs = False
+    max_steps = min(20, config.max_steps)  # Check up to 20 steps
+    
+    for step_num in range(max_steps):
+        obs1, reward1, done1, info1 = env1.step(action)
+        obs2, reward2, done2, info2 = env2.step(action)
+        
+        # Check if observations differ at this step
+        if not np.allclose(obs1, obs2, rtol=1e-5):
+            trajectory_differs = True
+            break
+        
+        # If either environment terminates, stop
+        if done1 or done2:
+            break
+    
+    # With different seeds and non-zero stochasticity, trajectories should
+    # diverge within multiple steps due to stochastic request rate fluctuations.
+    # The test is configured to avoid immediate termination scenarios.
+    assert trajectory_differs, (
+        f"With different random seeds ({seed1} vs {seed2}), trajectories should "
+        f"diverge within {max_steps} steps due to stochastic request rate fluctuations"
     )

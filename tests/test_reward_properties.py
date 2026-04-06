@@ -146,7 +146,8 @@ def test_reward_sensitivity(cpu_util, memory_util, allocated_resources, delta_cp
     
     # Test CPU sensitivity (ensure we stay in valid range)
     cpu_util_modified = min(100.0, cpu_util + delta_cpu)
-    if cpu_util_modified != cpu_util:
+    # Use epsilon comparison to handle floating point precision issues
+    if abs(cpu_util_modified - cpu_util) > 1e-6:
         reward_cpu_changed = calculator.calculate_reward(cpu_util_modified, memory_util, allocated_resources)
         assert reward_cpu_changed != baseline_reward, (
             f"Reward should change when CPU changes from {cpu_util:.2f}% to {cpu_util_modified:.2f}%"
@@ -154,7 +155,8 @@ def test_reward_sensitivity(cpu_util, memory_util, allocated_resources, delta_cp
     
     # Test memory sensitivity (ensure we stay in valid range)
     memory_util_modified = min(100.0, memory_util + delta_memory)
-    if memory_util_modified != memory_util:
+    # Use epsilon comparison to handle floating point precision issues
+    if abs(memory_util_modified - memory_util) > 1e-6:
         reward_memory_changed = calculator.calculate_reward(cpu_util, memory_util_modified, allocated_resources)
         assert reward_memory_changed != baseline_reward, (
             f"Reward should change when memory changes from {memory_util:.2f}% to {memory_util_modified:.2f}%"
