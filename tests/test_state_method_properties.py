@@ -63,6 +63,8 @@ class TestStateMethodConsistency:
         env.reset()
         
         for action in actions:
+            if env.done:
+                break  # Stop if episode terminates
             env.step(action)
             state = env.state()
             

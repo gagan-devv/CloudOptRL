@@ -95,7 +95,14 @@ class RewardCalculator:
             # At least one metric is out of range - apply small penalty
             total_reward -= 0.1
         
-        return total_reward
+        # Normalize reward to [0.0, 1.0] range for OpenEnv compliance
+        # Apply linear mapping: (reward + 5.0) / 7.0
+        normalized_reward = (total_reward + 5.0) / 7.0
+        
+        # Clamp to [0.0, 1.0] to ensure valid range
+        normalized_reward = max(0.0, min(1.0, normalized_reward))
+        
+        return normalized_reward
     
     def _utilization_reward(self, util: float, target_range: tuple[float, float]) -> float:
         """

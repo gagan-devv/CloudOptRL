@@ -1,0 +1,33 @@
+name: cloud-resource-allocation-rl
+version: 1.0.0
+description: Cloud infrastructure resource allocation environment for reinforcement learning
+
+observation_space:
+  type: Box
+  shape: [4]
+  dtype: float32
+  low: [0.0, 0.0, 0.0, 1.0]
+  high: [100.0, 100.0, .inf, .inf]
+  description: |
+    [cpu, memory, request_rate, resources]
+    - cpu: CPU utilization percentage (0-100)
+    - memory: Memory utilization percentage (0-100)
+    - request_rate: Incoming requests per timestep (0+)
+    - resources: Number of allocated server instances (1+)
+
+action_space:
+  type: Discrete
+  n: 3
+  description: |
+    0: Decrease resources (remove 1 server instance, minimum 1)
+    1: Maintain resources (keep current allocation)
+    2: Increase resources (add 1 server instance)
+
+reward_range: [0.0, 1.0]
+
+episode_length: 100
+
+termination_conditions:
+  - Max steps reached (100)
+  - CPU utilization > 95%
+  - Memory utilization > 95%

@@ -49,19 +49,20 @@ The solution provides:
 
 ### State Space
 
-The environment state is a 5-dimensional continuous vector:
+The environment state is a 4-dimensional continuous vector:
 
 ```python
-state = [cpu_util, memory_util, request_rate, allocated_resources, latency]
-# Example: [65.3, 58.2, 47.0, 3.0, 15.67]
+state = [cpu, memory, request_rate, resources]
+# Example: [65.3, 58.2, 47.0, 3]
 ```
+
+**Observation Format**: `[cpu, memory, request_rate, resources]`
 
 **State Components:**
 - **CPU Utilization** (0-100%): Percentage of CPU capacity being used
 - **Memory Utilization** (0-100%): Percentage of memory capacity being used  
 - **Request Rate** (0-∞): Number of incoming requests per timestep
 - **Allocated Resources** (1-∞): Number of server instances currently allocated
-- **Latency** (0-∞ ms): Average request latency calculated as `request_rate / allocated_resources`
 
 **PyTorch Integration:**
 ```python
@@ -72,6 +73,8 @@ state_tensor = env.get_state_tensor()  # Returns torch.Tensor
 ### Action Space
 
 Three discrete actions control resource allocation:
+
+**Action Format**: `{0: decrease, 1: maintain, 2: increase}`
 
 | Action | Value | Effect |
 |--------|-------|--------|
@@ -109,7 +112,7 @@ Episodes terminate when:
 
 ## Reward Function Design
 
-The reward function shapes agent behavior through three components:
+The reward function shapes agent behavior through three components, with all rewards normalized to the range [0.0, 1.0] for consistency and comparability across episodes.
 
 ### 1. Utilization Rewards
 
@@ -138,14 +141,19 @@ cost_penalty = -0.05 × allocated_resources
 total_reward = cpu_reward + memory_reward + cost_penalty
 if not (cpu_optimal and memory_optimal):
     total_reward -= 0.1  # Additional penalty for mixed states
+
+# Normalize to [0.0, 1.0] range
+normalized_reward = (total_reward + 5.0) / 7.0
+normalized_reward = max(0.0, min(1.0, normalized_reward))
 ```
 
-**Reward Range**: Typically -5.0 to +2.0
+**Reward Range**: [0.0, 1.0] (normalized)
 
 **Design Rationale**:
 - Positive rewards only when both CPU and memory are optimal
 - Stronger penalties for under-provisioning (instability risk) than over-provisioning
 - Resource cost encourages efficiency without sacrificing performance
+- Normalization ensures consistent reward magnitudes across episodes
 
 ## Grader Explanation
 
@@ -201,6 +209,92 @@ passed = final_score ≥ threshold (default: 0.0)
     'avg_latency': 12.4
 }
 ```
+
+## Task Difficulty Levels
+
+The environment supports three difficulty levels to evaluate agent robustness and generalization:
+
+### Easy Task
+- **Base Request Rate**: 40 requests/timestep
+- **Request Rate Std Dev**: 5.0
+- **Characteristics**: Low randomness, stable request patterns, predictable system behavior
+- **Use Case**: Initial testing and baseline evaluation
+
+### Medium Task (Default)
+- **Base Request Rate**: 60 requests/timestep
+- **Request Rate Std Dev**: 15.0
+- **Characteristics**: Moderate randomness, occasional request spikes, balanced challenge
+- **Use Case**: Standard evaluation and agent training
+
+### Hard Task
+- **Base Request Rate**: 80 requests/timestep
+- **Request Rate Std Dev**: 25.0
+- **Characteristics**: High randomness, frequent system instability, challenging dynamics
+- **Use Case**: Stress testing and robustness evaluation
+
+### Using Task Levels
+
+```python
+from env.environment import CloudResourceEnv
+
+# Create environment with specific task difficulty
+env_easy = CloudResourceEnv(task_name="easy")
+env_medium = CloudResourceEnv(task_name="medium")  # Default
+env_hard = CloudResourceEnv(task_name="hard")
+
+# Run episode
+state = env_hard.reset()
+# ... interact with environment
+```
+
+## Baseline Script Usage
+
+A simple heuristic baseline policy is provided for performance comparison.
+
+### Running the Baseline
+
+**IMPORTANT**: Activate your virtual environment first!
+
+```bash
+# Activate virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+venv\Scripts\activate
+
+# Run baseline script
+python run_baseline.py
+```
+
+### Baseline Policy Logic
+
+The baseline uses a simple CPU-based heuristic:
+
+```python
+if cpu_utilization > 70%:
+    action = 2  # Increase resources
+elif cpu_utilization < 40%:
+    action = 0  # Decrease resources
+else:
+    action = 1  # Maintain resources
+```
+
+### Expected Output
+
+```
+Cumulative Reward: 45.23
+Average CPU: 52.30%
+Average Memory: 48.70%
+Final Score: 0.523
+```
+
+### Interpreting Results
+
+- **Cumulative Reward**: Sum of all rewards during the episode (higher is better)
+- **Average CPU/Memory**: Mean utilization percentages (target: 40-70%)
+- **Final Score**: Overall performance metric from EpisodeGrader (0.0-1.0 scale)
+
+Use these baseline results to compare against your own RL agents or policies.
 
 ## Architecture
 
@@ -277,6 +371,8 @@ cd cloud-resource-allocation-rl
 
 ### Step 2: Create Virtual Environment (Recommended)
 
+**IMPORTANT**: Always activate your virtual environment before running any Python commands.
+
 ```bash
 # Create virtual environment
 python -m venv venv
@@ -287,6 +383,8 @@ source venv/bin/activate
 # On Windows:
 venv\Scripts\activate
 ```
+
+You should see `(venv)` in your terminal prompt when the virtual environment is active.
 
 ### Step 3: Install Dependencies
 

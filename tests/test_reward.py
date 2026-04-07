@@ -41,8 +41,9 @@ class TestRewardCalculator:
             allocated_resources=5
         )
         
-        # Should be strongly negative due to over-provisioning
-        assert reward < -1.0
+        # Should be low due to over-provisioning, normalized to [0.0, 1.0]
+        assert 0.0 <= reward <= 1.0
+        assert reward < 0.5  # Should be in lower half of range
     
     def test_reward_with_extreme_utilization_hundred(self):
         """Test reward calculation with 100% utilization (extreme under-provisioning)."""
@@ -53,8 +54,9 @@ class TestRewardCalculator:
             allocated_resources=1
         )
         
-        # Should be strongly negative due to under-provisioning
-        assert reward < -1.0
+        # Should be low due to under-provisioning, normalized to [0.0, 1.0]
+        assert 0.0 <= reward <= 1.0
+        assert reward < 0.5  # Should be in lower half of range
     
     def test_reward_with_minimum_resources(self):
         """Test reward calculation with minimum resources (1 instance)."""
@@ -67,8 +69,9 @@ class TestRewardCalculator:
             allocated_resources=1
         )
         
-        # Should be positive (optimal utilization) with minimal resource penalty
-        assert reward > 0
+        # Should be high (optimal utilization) with minimal resource penalty, normalized to [0.0, 1.0]
+        assert 0.0 <= reward <= 1.0
+        assert reward > 0.5  # Should be in upper half of range
     
     def test_reward_with_invalid_resources_raises_error(self):
         """Test that allocated_resources < 1 raises ValueError."""
@@ -92,8 +95,8 @@ class TestRewardCalculator:
             allocated_resources=1
         )
         
-        # Should be negative (under-provisioning)
-        assert reward < 0
+        # Should be in valid range [0.0, 1.0]
+        assert 0.0 <= reward <= 1.0
         assert isinstance(reward, float)
     
     def test_reward_clamping_memory_negative(self):
@@ -107,11 +110,9 @@ class TestRewardCalculator:
             allocated_resources=1
         )
         
-        # Memory is clamped to 0 (below optimal), but CPU is optimal
-        # With new reward logic, this might be slightly positive or negative
-        # The important thing is it doesn't crash and returns a valid float
+        # Should be in valid range [0.0, 1.0]
+        assert 0.0 <= reward <= 1.0
         assert isinstance(reward, float)
-        assert -2.0 < reward < 2.0  # Reasonable range
     
     def test_reward_at_optimal_range_boundaries(self):
         """Test reward calculation at the boundaries of optimal ranges."""
@@ -123,7 +124,7 @@ class TestRewardCalculator:
             memory_util=40.0,
             allocated_resources=3
         )
-        assert reward_lower > -1.0  # Should be near positive
+        assert 0.0 <= reward_lower <= 1.0
         
         # Test at upper boundary (70%, 70%)
         reward_upper = calculator.calculate_reward(
@@ -131,7 +132,7 @@ class TestRewardCalculator:
             memory_util=70.0,
             allocated_resources=3
         )
-        assert reward_upper > -1.0  # Should be near positive
+        assert 0.0 <= reward_upper <= 1.0
         
         # Test at center (55%, 55%)
         reward_center = calculator.calculate_reward(
@@ -139,7 +140,9 @@ class TestRewardCalculator:
             memory_util=55.0,
             allocated_resources=3
         )
-        assert reward_center > reward_lower  # Center should be better than edges
+        assert 0.0 <= reward_center <= 1.0
+        # Center should be better than edges
+        assert reward_center > reward_lower
         assert reward_center > reward_upper
     
     def test_reward_mixed_utilization_scenarios(self):
@@ -152,8 +155,7 @@ class TestRewardCalculator:
             memory_util=20.0,
             allocated_resources=3
         )
-        # With new logic, this gets -0.1 penalty for being out of range
-        # but might still be slightly positive or negative depending on balance
+        assert 0.0 <= reward1 <= 1.0
         
         # CPU optimal, memory under-provisioned
         reward2 = calculator.calculate_reward(
@@ -161,7 +163,7 @@ class TestRewardCalculator:
             memory_util=85.0,
             allocated_resources=3
         )
-        # Under-provisioning has harsher penalty, should be more negative
+        assert 0.0 <= reward2 <= 1.0
         
         # Both optimal
         reward3 = calculator.calculate_reward(
@@ -169,10 +171,11 @@ class TestRewardCalculator:
             memory_util=55.0,
             allocated_resources=3
         )
+        assert 0.0 <= reward3 <= 1.0
         # Both optimal should be the best
         assert reward3 > reward1  # Both optimal should be better than mixed
         assert reward3 > reward2  # Both optimal should be better than under-provisioned
-        assert reward3 > 0  # Both optimal should be positive
+        assert reward3 > 0.5  # Both optimal should be in upper half
     
     def test_resource_cost_penalty_scaling(self):
         """Test that resource cost penalty scales with allocated resources."""
@@ -191,10 +194,14 @@ class TestRewardCalculator:
             allocated_resources=10
         )
         
+        # Both should be in valid range
+        assert 0.0 <= reward_low_resources <= 1.0
+        assert 0.0 <= reward_high_resources <= 1.0
+        
         # Higher resources should result in lower reward due to cost penalty
         assert reward_high_resources < reward_low_resources
         
-        # The difference should be approximately 0.05 * (10 - 1) = 0.45
-        expected_difference = 0.05 * (10 - 1)
+        # The difference should be approximately (0.05 * (10 - 1)) / 7.0 after normalization
+        expected_difference = (0.05 * (10 - 1)) / 7.0
         actual_difference = reward_low_resources - reward_high_resources
         assert abs(actual_difference - expected_difference) < 0.01
