@@ -486,8 +486,8 @@ async def reset_endpoint():
 app = gr.mount_gradio_app(app, demo, path="/")
 
 
-if __name__ == "__main__":
-    # Run with uvicorn
+def main():
+    """Main entry point for the server application."""
     import uvicorn
     import logging
     
@@ -497,3 +497,7 @@ if __name__ == "__main__":
     uvicorn_access_logger.disabled = True
     
     uvicorn.run(app, host="0.0.0.0", port=7860, log_level="error")
+
+
+if __name__ == "__main__":
+    main()

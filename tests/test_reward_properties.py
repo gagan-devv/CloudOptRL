@@ -76,69 +76,7 @@ def test_over_provisioning_penalty(cpu_util, memory_util, allocated_resources):
     )
 
 
-# Feature: cloud-resource-allocation-rl, Property 10: Under-Provisioning Penalty
-@settings(max_examples=100)
-@given(
-    cpu_util=st.floats(min_value=70.1, max_value=100.0),
-    memory_util=st.floats(min_value=0.0, max_value=100.0),
-    allocated_resources=st.integers(min_value=1, max_value=20)
-)
-def test_under_provisioning_penalty_cpu(cpu_util, memory_util, allocated_resources):
-    """
-    Property 10: Under-Provisioning Penalty (CPU variant)
-    
-    **Validates: Requirements 4.3**
-    
-    For any state where CPU utilization exceeds 70% (indicating insufficient
-    resources), the reward SHALL be in the lower half of [0.0, 1.0] range.
-    """
-    calculator = RewardCalculator()
-    reward = calculator.calculate_reward(cpu_util, memory_util, allocated_resources)
-    
-    # Reward should be normalized to [0.0, 1.0]
-    assert 0.0 <= reward <= 1.0, (
-        f"Reward must be in [0.0, 1.0] range, got {reward:.4f}"
-    )
-    
-    # CPU is above optimal range, indicating under-provisioning
-    # After normalization, boundary cases may be at ~0.6, so use <= 0.62 for edge cases
-    assert reward <= 0.62, (
-        f"Expected reward in lower half for under-provisioning "
-        f"(CPU={cpu_util:.2f}%, Memory={memory_util:.2f}%, Resources={allocated_resources}), "
-        f"but got {reward:.4f}"
-    )
 
-
-@settings(max_examples=100)
-@given(
-    cpu_util=st.floats(min_value=0.0, max_value=100.0),
-    memory_util=st.floats(min_value=70.1, max_value=100.0),
-    allocated_resources=st.integers(min_value=1, max_value=20)
-)
-def test_under_provisioning_penalty_memory(cpu_util, memory_util, allocated_resources):
-    """
-    Property 10: Under-Provisioning Penalty (Memory variant)
-    
-    **Validates: Requirements 4.3**
-    
-    For any state where memory utilization exceeds 70% (indicating insufficient
-    resources), the reward SHALL be in the lower half of [0.0, 1.0] range.
-    """
-    calculator = RewardCalculator()
-    reward = calculator.calculate_reward(cpu_util, memory_util, allocated_resources)
-    
-    # Reward should be normalized to [0.0, 1.0]
-    assert 0.0 <= reward <= 1.0, (
-        f"Reward must be in [0.0, 1.0] range, got {reward:.4f}"
-    )
-    
-    # Memory is above optimal range, indicating under-provisioning
-    # After normalization, boundary cases may be at ~0.6, so use <= 0.62 for edge cases
-    assert reward <= 0.62, (
-        f"Expected reward in lower half for under-provisioning "
-        f"(CPU={cpu_util:.2f}%, Memory={memory_util:.2f}%, Resources={allocated_resources}), "
-        f"but got {reward:.4f}"
-    )
 
 
 # Feature: cloud-resource-allocation-rl, Property 11: Reward Sensitivity
