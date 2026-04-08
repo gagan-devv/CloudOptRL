@@ -479,11 +479,13 @@ app = FastAPI()
 
 @app.post("/reset")
 async def reset_endpoint():
-    """Reset endpoint for validator compliance."""
     return {"status": "ok"}
 
-# Mount Gradio interface at root path
-app = gr.mount_gradio_app(app, demo, path="/")
+@app.get("/")
+def root():
+    return RedirectResponse(url="/ui")
+
+app = gr.mount_gradio_app(app, demo, path="/ui")
 
 
 def main():
