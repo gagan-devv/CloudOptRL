@@ -475,16 +475,12 @@ with gr.Blocks(title="Cloud Resource Allocation RL") as demo:
     """)
 
 
-# Create FastAPI app at module level (required for OpenEnv)
 app = FastAPI()
-api_router = APIRouter()
 
-@api_router.post("/reset")
-@api_router.post("/reset/")
+@app.post("/reset")
+@app.post("/reset/")
 async def reset_endpoint():
     return {"status": "ok"}
-
-app.include_router(api_router)
 
 @app.get("/")
 def root():
