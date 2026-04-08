@@ -15,10 +15,12 @@ dependencies = [
     "matplotlib",
     "fastapi",
     "uvicorn",
-    "pydantic",
-    "torch",
+    "pydantic>=2.0.0",
+    "torch>=2.0.0",
     "openai",
-    "openenv-core>=0.2.0"
+    "openenv-core>=0.2.0",
+    "hypothesis",
+    "pytest"
 ]
 
 [project.scripts]
