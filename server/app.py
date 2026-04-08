@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from env.environment import CloudResourceEnv
 from env.grader import EpisodeGrader
+from fastapi.responses import RedirectResponse
 
 
 # Initialize environment and grader
