@@ -488,4 +488,11 @@ if __name__ == "__main__":
     
     # Run with uvicorn
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    import logging
+    
+    # Suppress uvicorn access logs to keep stdout clean for inference
+    # Only errors will be logged to stderr
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.disabled = True
+    
+    uvicorn.run(app, host="0.0.0.0", port=7860, log_level="error")
