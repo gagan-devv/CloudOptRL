@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy project files
 COPY requirements.txt .
 COPY env/ ./env/
-COPY app.py .
+COPY server/app.py .
 COPY README.md .
 
 # Install dependencies
