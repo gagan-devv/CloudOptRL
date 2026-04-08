@@ -15,9 +15,16 @@ from env.async_wrapper import AsyncEnvWrapper
 # Environment variables
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4")
-HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_TOKEN = os.getenv("HF_TOKEN")
 TASK_NAME = os.getenv("TASK_NAME", "medium")
 BENCHMARK = os.getenv("BENCHMARK", "cloud_resource_env")
+
+# Action Map
+ACTION_MAP = {
+    0: "decrease",
+    1: "maintain",
+    2: "increase"
+}
 
 # Constants
 MAX_STEPS = 20
@@ -65,23 +72,22 @@ async def main():
     async_env = AsyncEnvWrapper(env)
     
     # Log [START]
-    print(f"[START] task={TASK_NAME} env={BENCHMARK} model={MODEL_NAME}")
-    
+    print(f"[START] task={TASK_NAME} env={BENCHMARK} model={MODEL_NAME}", flush=True)    
     # Run episode
     state = await async_env.reset()
     rewards = []
     
     for step in range(MAX_STEPS):
         # Get action from heuristic policy
-        action = heuristic_policy(env.state())
+        action_int = heuristic_policy(env.state())
+        action = ACTION_MAP[action_int]
         
         # Execute step
         try:
-            obs, reward, done, info = await async_env.step(action)
+            obs, reward, done, info = await async_env.step(action_int)
             rewards.append(reward)
-            
             # Log [STEP]
-            print(f"[STEP] step={step+1} action={action} reward={reward:.2f} done={done} error=None")
+            print(f"[STEP] step={step+1} action={action} reward={reward:.2f} done={str(done).lower()} error=null", flush=True)
             
             if done:
                 break
@@ -96,7 +102,8 @@ async def main():
     
     # Log [END]
     rewards_str = ",".join([f"{r:.2f}" for r in rewards])
-    print(f"[END] success={success} steps={len(rewards)} score={avg_reward:.2f} rewards={rewards_str}")
+    score = min(max(avg_reward, 0.0), 1.0)
+    print(f"[END] success={str(success).lower()} steps={len(rewards)} score={score:.2f} rewards={rewards_str}", flush=True)
     
     await async_env.close()
 
