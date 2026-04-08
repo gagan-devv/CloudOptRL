@@ -79,15 +79,15 @@ def test_reset_endpoint_with_gradio_mounted():
 
 def test_fastapi_app_structure():
     """Test that the main app.py has correct FastAPI structure."""
-    # Import the demo from app.py
+    # Import the demo from server/app.py
     import sys
     import os
     
     # Add parent directory to path to import app
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-    # Import the demo object from app.py
-    from app import demo
+    # Import the demo object from server/app.py
+    from server.app import demo
     
     # Verify demo is a Gradio Blocks instance
     assert isinstance(demo, gr.Blocks)
@@ -115,12 +115,12 @@ def test_fastapi_app_structure():
 
 def test_port_7860_configuration():
     """Test that port 7860 is the configured port."""
-    # This is a documentation test - we verify the port is set in app.py
+    # This is a documentation test - we verify the port is set in server/app.py
     # The actual port binding happens at runtime with uvicorn.run()
     
-    # Read app.py to verify port configuration
+    # Read server/app.py to verify port configuration
     import os
-    app_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py")
+    app_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server", "app.py")
     
     with open(app_path, 'r') as f:
         content = f.read()
