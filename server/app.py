@@ -6,7 +6,7 @@ cloud resource allocation environment. Users can observe system metrics and
 take actions to learn about system dynamics before training an RL agent.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.responses import JSONResponse
 import gradio as gr
 import numpy as np
@@ -477,10 +477,13 @@ with gr.Blocks(title="Cloud Resource Allocation RL") as demo:
 
 # Create FastAPI app at module level (required for OpenEnv)
 app = FastAPI()
+api_router = APIRouter()
 
-@app.post("/reset")
+@api_router.post("/reset")
 async def reset_endpoint():
     return {"status": "ok"}
+
+app.include_router(api_router)
 
 @app.get("/")
 def root():
