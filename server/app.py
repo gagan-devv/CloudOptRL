@@ -480,6 +480,7 @@ app = FastAPI()
 api_router = APIRouter()
 
 @api_router.post("/reset")
+@api_router.post("/reset/")
 async def reset_endpoint():
     return {"status": "ok"}
 
