@@ -8,7 +8,6 @@ and [END] logs to stdout.
 
 import os
 import asyncio
-from openai import OpenAI
 from env.environment import CloudResourceEnv
 from env.async_wrapper import AsyncEnvWrapper
 
@@ -61,7 +60,12 @@ async def main():
     # Only initialize if HF_TOKEN is provided
     client = None
     if HF_TOKEN:
-        client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
+        except ImportError:
+            # OpenAI package not installed, continue without it
+            pass
     
     # Create environment with async wrapper
     env = CloudResourceEnv(task_name=TASK_NAME)
